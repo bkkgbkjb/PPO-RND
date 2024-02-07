@@ -58,7 +58,7 @@ if __name__ == '__main__':
             states = []
             total_pre_normalization_steps = config["rollout_length"] * config["pre_normalization_steps"]
             actions = np.random.randint(0, config["n_actions"], (total_pre_normalization_steps, config["n_workers"]))
-            for t in range(total_pre_normalization_steps):
+            for t in tqdm(range(total_pre_normalization_steps)):
 
                 for worker_id, parent in enumerate(parents):
                     parent.recv()  # Only collects next_states for normalization.
