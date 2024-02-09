@@ -20,14 +20,22 @@ def tqdm(iter, desc: str):
             self._i = 0
 
         def __iter__(self):
+            print(
+                f"----CLI-tqdm: {self._desc} started at {get_current_datetime_str(no_micro=True)}",
+                flush=True,
+            )
             for ele in self._iter:
-                if self._i % self._print_interval == 0:
+                if self._i > 0 and self._i % self._print_interval == 0:
                     print(
-                        f"----CLI-tqdm: {self._i}th {self._desc} started at {get_current_datetime_str(no_micro=True)}",
+                        f"----CLI-tqdm: {self._i}th of {self._desc} started at {get_current_datetime_str(no_micro=True)}",
                         flush=True,
                     )
                 yield ele
                 self._i += 1
+            print(
+                f"----CLI-tqdm: {self._desc} ended at {get_current_datetime_str(no_micro=True)}",
+                flush=True,
+            )
 
     return CLITqdm(iter, desc=desc)
 
@@ -46,6 +54,11 @@ class TqdmBar:
         if self._tqdm:
             self._tqdm.__enter__()
             return self._tqdm
+
+        print(
+            f"----CLI-tqdm bar: {self._desc} started at {get_current_datetime_str(no_micro=True)}",
+            flush=True,
+        )
         return self
 
     def __exit__(self, exception_type, exception_value, exception_traceback):
@@ -53,14 +66,19 @@ class TqdmBar:
             self._tqdm.__exit__(exception_type, exception_value, exception_traceback)
             return
 
+        print(
+            f"----CLI-tqdm bar: {self._desc} ended at {get_current_datetime_str(no_micro=True)}",
+            flush=True,
+        )
+
     def update(self, *args, **kwargs):
         if self._tqdm:
             self._tqdm.update(*args, **kwargs)
             return
 
-        if self._i % self._print_interval == 0:
+        if self._i > 0 and self._i % self._print_interval == 0:
             print(
-                f"----CLI-tqdm bar: {self._i}th {self._desc} end at {get_current_datetime_str(no_micro=True)}",
+                f"----CLI-tqdm bar: {self._i}th of {self._desc} end at {get_current_datetime_str(no_micro=True)}",
                 flush=True,
             )
         self._i += 1
