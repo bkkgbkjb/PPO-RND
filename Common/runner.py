@@ -9,6 +9,8 @@ class Worker:
         self.max_episode_steps = self.config["max_frames_per_episode"]
         self.state_shape = self.config["state_shape"]
         self.env = make_atari(self.env_name, self.max_episode_steps)
+        self.env.seed(config['seed'] + id + 1)
+        print(f"in Worker {id}: self.env is seed by: {config['seed'] + id + 1}")
         self._stacked_states = np.zeros(self.state_shape, dtype=np.uint8)
         self.reset()
 

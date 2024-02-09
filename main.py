@@ -6,7 +6,10 @@ from torch.multiprocessing import Process, Pipe
 import numpy as np
 from Brain.brain import Brain
 import gym
-from tqdm import tqdm
+from utils.progress import tqdm
+from utils.seed import seed_all
+from utils.reporter import init_reporter, get_reporter
+import json
 
 
 def run_workers(worker, conn):
@@ -15,6 +18,8 @@ def run_workers(worker, conn):
 
 if __name__ == '__main__':
     config = get_params()
+    init_reporter(config['name'], json.dumps(config, indent=4, sort_keys=True))
+    seed_all(config['seed'])
 
     test_env = gym.make(config["env_name"])
     config.update({"n_actions": test_env.action_space.n})
@@ -58,7 +63,7 @@ if __name__ == '__main__':
             states = []
             total_pre_normalization_steps = config["rollout_length"] * config["pre_normalization_steps"]
             actions = np.random.randint(0, config["n_actions"], (total_pre_normalization_steps, config["n_workers"]))
-            for t in tqdm(range(total_pre_normalization_steps)):
+            for t in tqdm(range(total_pre_normalization_steps), desc="pre_normalization"):
 
                 for worker_id, parent in enumerate(parents):
                     parent.recv()  # Only collects next_states for normalization.
@@ -92,7 +97,7 @@ if __name__ == '__main__':
         logger.on()
         episode_ext_reward = 0
         concatenate = np.concatenate
-        for iteration in tqdm(range(init_iteration + 1, config["total_rollouts_per_env"] + 1)):
+        for iteration in tqdm(range(init_iteration + 1, config["total_rollouts_per_env"] + 1), desc="total iter: "):
             total_states = init_states
             total_actions = init_actions
             total_action_probs = init_action_probs

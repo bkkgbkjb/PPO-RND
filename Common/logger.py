@@ -6,6 +6,7 @@ import os
 import datetime
 import glob
 from collections import deque
+from utils.reporter import get_reporter
 
 
 class Logger:
@@ -40,9 +41,9 @@ class Logger:
         os.mkdir("Models/" + self.log_dir)
 
     def log_params(self):
-        with SummaryWriter("Logs/" + self.log_dir) as writer:
-            for k, v in self.config.items():
-                writer.add_text(k, str(v))
+        # with SummaryWriter("Logs/" + self.log_dir) as writer:
+        # for k, v in self.config.items():
+        get_reporter().add_params(self.config)
 
     def on(self):
         self.start_time = time.time()
@@ -60,21 +61,34 @@ class Logger:
         if iteration % (self.config["interval"] // 3) == 0:
             self.save_params(self.episode, iteration)
 
-        with SummaryWriter("Logs/" + self.log_dir) as writer:
-            writer.add_scalar("Episode Ext Reward", self.episode_ext_reward, self.episode)
-            writer.add_scalar("Running Episode Ext Reward", self.running_ext_reward, self.episode)
-            writer.add_scalar("Visited rooms", len(list(self.visited_rooms)), self.episode)
-            writer.add_scalar("Running last 10 Ext Reward", self.running_last_10_ext_r, self.episode)
-            writer.add_scalar("Max Episode Ext Reward", self.max_episode_reward, self.episode)
-            writer.add_scalar("Running Action Probability", self.running_act_prob, iteration)
-            writer.add_scalar("Running Intrinsic Reward", self.running_int_reward, iteration)
-            writer.add_scalar("Running PG Loss", self.running_training_logs[0], iteration)
-            writer.add_scalar("Running Ext Value Loss", self.running_training_logs[1], iteration)
-            writer.add_scalar("Running Int Value Loss", self.running_training_logs[2], iteration)
-            writer.add_scalar("Running RND Loss", self.running_training_logs[3], iteration)
-            writer.add_scalar("Running Entropy", self.running_training_logs[4], iteration)
-            writer.add_scalar("Running Intrinsic Explained variance", self.running_training_logs[5], iteration)
-            writer.add_scalar("Running Extrinsic Explained variance", self.running_training_logs[6], iteration)
+        get_reporter().add_scalars(
+            {
+                # "Episode Ext Reward": (self.episode_ext_reward, self.episode),
+                # "Running Episode Ext Reward": (self.running_ext_reward, self.episode),
+                # "Visited rooms": (len(list(self.visited_rooms)), self.episode),
+                # "Running last 10 Ext Reward": (
+                #     self.running_last_10_ext_r,
+                #     self.episode,
+                # ),
+                # "Max Episode Ext Reward": (self.max_episode_reward, self.episode),
+                "Running Action Probability": (self.running_act_prob, iteration),
+                "Running Intrinsic Reward": (self.running_int_reward, iteration),
+                "Running PG Loss": (self.running_training_logs[0], iteration),
+                "Running Ext Value Loss": (self.running_training_logs[1], iteration),
+                "Running Int Value Loss": (self.running_training_logs[2], iteration),
+                "Running RND Loss": (self.running_training_logs[3], iteration),
+                "Running Entropy": (self.running_training_logs[4], iteration),
+                "Running Intrinsic Explained variance": (
+                    self.running_training_logs[5],
+                    iteration,
+                ),
+                "Running Extrinsic Explained variance": (
+                    self.running_training_logs[6],
+                    iteration,
+                ),
+            },
+            "train",
+        )
 
         self.off()
         if iteration % self.config["interval"] == 0:
@@ -101,6 +115,19 @@ class Logger:
         self.max_episode_reward = max(self.max_episode_reward, self.episode_ext_reward)
 
         self.running_ext_reward = self.exp_avg(self.running_ext_reward, self.episode_ext_reward)
+        get_reporter().add_scalars(
+            {
+                "Episode Ext Reward": (self.episode_ext_reward, self.episode),
+                "Running Episode Ext Reward": (self.running_ext_reward, self.episode),
+                "Visited rooms": (len(list(self.visited_rooms)), self.episode),
+                "Running last 10 Ext Reward": (
+                    self.running_last_10_ext_r,
+                    self.episode,
+                ),
+                "Max Episode Ext Reward": (self.max_episode_reward, self.episode),
+            },
+            "train",
+        )
 
         self.last_10_ep_rewards.append(self.episode_ext_reward)
         if len(self.last_10_ep_rewards) == self.moving_avg_window:
