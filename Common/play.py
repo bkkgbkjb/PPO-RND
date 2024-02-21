@@ -18,12 +18,12 @@ class Play:
         self.VideoWriter = cv2.VideoWriter("Results/" + "result" + ".avi", self.fourcc, 50.0,
                                            self.env.observation_space.shape[1::-1])
 
-    def evaluate(self):
+    def evaluate(self, seed: int):
         stacked_states = np.zeros((84, 84, 4), dtype=np.uint8)
         mean_ep_reward = []
         obs, int_rewards = [], []
         for ep in range(self.max_episode):
-            self.env.seed(ep)
+            self.env.seed(ep + seed)
             s = self.env.reset()
             stacked_states = stack_states(stacked_states, s, True)
             episode_reward = 0

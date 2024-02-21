@@ -162,4 +162,4 @@ if __name__ == '__main__':
     else:
         checkpoint = logger.load_weights()
         play = Play(config["env_name"], brain, checkpoint)
-        play.evaluate()
+        play.evaluate(config['seed'])
