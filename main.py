@@ -22,7 +22,7 @@ if __name__ == "__main__":
     init_reporter(config["name"], json.dumps(config, indent=4, sort_keys=True))
     seed_all(config["seed"])
 
-    test_env = gym.make(config["env_name"])
+    test_env = envpool.make("MontezumaRevenge-v5", env_type="gym", num_envs=1)
     config.update({"n_actions": test_env.action_space.n})
     test_env.close()
 
