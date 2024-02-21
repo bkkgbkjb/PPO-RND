@@ -4,6 +4,7 @@ import gym
 from copy import deepcopy
 import torch
 from torch import inf
+import envpool
 
 
 def mean_of_list(func):
@@ -48,16 +49,20 @@ def explained_variance(ypred, y):
     return np.nan if vary == 0 else 1 - np.var(y - ypred) / vary
 
 
-def make_atari(env_id, max_episode_steps, sticky_action=True, max_and_skip=True):
-    env = gym.make(env_id)
-    env._max_episode_steps = max_episode_steps * 4
-    assert 'NoFrameskip' in env.spec.id
-    if sticky_action:
-        env = StickyActionEnv(env)
-    if max_and_skip:
-        env = RepeatActionEnv(env)
-    env = MontezumaVisitedRoomEnv(env, 3)
-    env = AddRandomStateToInfoEnv(env)
+def make_atari(env_id, env_nums, max_episode_steps, sticky_action=True, max_and_skip=True, seed=1111):
+    env = envpool.make(
+        "MontezumaRevenge-v5",
+        env_type="gym",
+        num_envs=env_nums,
+        seed=seed,
+        max_episode_steps=max_episode_steps,
+    )
+    # if sticky_action:
+    #     env = StickyActionEnv(env)
+    # if max_and_skip:
+    #     env = RepeatActionEnv(env)
+    # env = MontezumaVisitedRoomEnv(env, 3)
+    # env = AddRandomStateToInfoEnv(env)
 
     return env
 
