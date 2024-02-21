@@ -115,6 +115,7 @@ if __name__ == "__main__":
         episode_ext_reward = 0
         concatenate = np.concatenate
 
+        _states, _infos = envs.reset()
         for iteration in tqdm(
             range(init_iteration + 1, config["total_rollouts_per_env"] + 1),
             desc="total iter: ",
@@ -134,11 +135,9 @@ if __name__ == "__main__":
             for t in range(config["rollout_length"]):
                 # for worker_id, parent in enumerate(parents):
                 #     total_states[worker_id, t] = parent.recv()
-                _states, _infos = envs.reset()
                 assert _states.shape == (config["n_workers"], 4, 84, 84)
                 total_states[:, t] = _states
 
-                infos = []
                 (
                     total_actions[:, t],
                     total_int_values[:, t],
@@ -146,31 +145,28 @@ if __name__ == "__main__":
                     total_log_probs[:, t],
                     total_action_probs[:, t],
                 ) = brain.get_actions_and_values(total_states[:, t], batch=True)
-                # for parent, a in zip(parents, total_actions[:, t]):
-                #     parent.send(a)
+
                 s_, r, _terms, _truncs, info = envs.step(total_actions[:, t])
                 assert s_.shape == (config["n_workers"], 4, 84, 84)
 
-                # for worker_id, parent in enumerate(parents):
-                #     s_, r, d, info = parent.recv()
-                #     infos.append(info)
-                #     total_ext_rewards[worker_id, t] = r
-                #     total_dones[worker_id, t] = d
-                #     next_states[worker_id] = s_
-                #     total_next_obs[worker_id, t] = s_[-1, ...]
-                infos.append(info)
                 total_ext_rewards[:, t] = r
                 total_dones[:, t] = _terms
                 next_states[:] = s_
                 total_next_obs[:, t] = s_[:, [-1], ...]
                 episode_ext_reward += total_ext_rewards[0, t]
-                if total_dones[0, t]:
+
+                # 第0号环境done
+                if _terms[0] or _truncs[0]:
                     episode += 1
-                    if "episode" in infos[0]:
-                        # visited_rooms = infos[0]["episode"]["visited_room"]
-                        visited_rooms = []
-                        logger.log_episode(episode, episode_ext_reward, visited_rooms)
+                    # if "episode" in infos[0]:
+                    # visited_rooms = infos[0]["episode"]["visited_room"]
+                    visited_rooms = []
+                    logger.log_episode(episode, episode_ext_reward, visited_rooms)
                     episode_ext_reward = 0
+
+                s_, info = envs.reset_dead_envs(s_, r, _terms, _truncs, info)
+
+                _states = s_
 
             total_next_obs = concatenate(total_next_obs)
             assert total_next_obs.shape == (
