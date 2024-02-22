@@ -7,13 +7,14 @@ import datetime
 import glob
 from collections import deque
 from utils.reporter import get_reporter
+from utils.time import get_current_datetime_str
 
 
 class Logger:
     def __init__(self, brain, **config):
         self.config = config
         self.brain = brain
-        self.log_dir = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        self.log_dir = get_current_datetime_str()
         self.start_time = 0
         self.duration = 0
         self.episode = 0

@@ -195,3 +195,7 @@ class Brain:
 
     def set_to_eval_mode(self):
         self.current_policy.eval()
+    
+    def set_to_train_mode(self):
+        self.current_policy.train()
+

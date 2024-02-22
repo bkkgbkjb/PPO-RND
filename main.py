@@ -1,4 +1,4 @@
-from Common.runner import EnvPoolWorker
+from Common.runner import TrainEnvPool, EvalEnvPool, eval_in_envs
 from Common.play import Play
 from Common.config import get_params
 from Common.logger import Logger
@@ -25,6 +25,7 @@ if __name__ == "__main__":
     test_env = envpool.make("MontezumaRevenge-v5", env_type="gym", num_envs=1)
     config.update({"n_actions": test_env.action_space.n})
     test_env.close()
+    del test_env
 
     config.update(
         {
@@ -35,6 +36,7 @@ if __name__ == "__main__":
     config.update({"predictor_proportion": 32 / config["n_workers"]})
 
     brain = Brain(**config)
+    brain.set_to_train_mode()
     logger = Logger(brain, **config)
 
     if not config["do_test"]:
@@ -54,7 +56,8 @@ if __name__ == "__main__":
             episode = 0
             visited_rooms = set([1])
 
-        envs = EnvPoolWorker(-1, **config)
+        envs = TrainEnvPool(**config)
+        eval_envs = EvalEnvPool(**config)
 
         if config["train_from_scratch"]:
             print("---Pre_normalization started.---")
@@ -116,6 +119,14 @@ if __name__ == "__main__":
         concatenate = np.concatenate
 
         _states, _infos = envs.reset()
+
+        brain.set_to_eval_mode()
+        eval_in_envs(
+            lambda s: brain.get_actions_and_values(s, batch=True)[0], eval_envs, 0
+        )
+        brain.set_to_train_mode()
+
+        assert config["total_rollouts_per_env"] % config["eval_times"] == 0
         for iteration in tqdm(
             range(init_iteration + 1, config["total_rollouts_per_env"] + 1),
             desc="total iter: ",
@@ -146,14 +157,17 @@ if __name__ == "__main__":
                     total_action_probs[:, t],
                 ) = brain.get_actions_and_values(total_states[:, t], batch=True)
 
-                s_, r, _terms, _truncs, info = envs.step(total_actions[:, t])
+                s_, original_reward, _terms, _truncs, info = envs.step(
+                    total_actions[:, t]
+                )
                 assert s_.shape == (config["n_workers"], 4, 84, 84)
+                r = np.sign(original_reward)
 
                 total_ext_rewards[:, t] = r
                 total_dones[:, t] = _terms
                 next_states[:] = s_
                 total_next_obs[:, t] = s_[:, [-1], ...]
-                episode_ext_reward += total_ext_rewards[0, t]
+                episode_ext_reward += original_reward[0]
 
                 # 第0号环境done
                 if _terms[0] or _truncs[0]:
@@ -202,6 +216,16 @@ if __name__ == "__main__":
                 total_int_rewards[0].mean(),
                 total_action_probs[0].max(-1).mean(),
             )
+
+            if iteration % int(config["total_rollouts_per_env"] / config["eval_times"]) == 0:
+
+                brain.set_to_eval_mode()
+                eval_in_envs(
+                    lambda s: brain.get_actions_and_values(s, batch=True)[0],
+                    eval_envs,
+                    iteration,
+                )
+                brain.set_to_train_mode()
 
     else:
         checkpoint = logger.load_weights()

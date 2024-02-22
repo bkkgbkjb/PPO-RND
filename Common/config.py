@@ -5,10 +5,12 @@ def get_params():
     parser = argparse.ArgumentParser(
         description="Variable parameters based on the configuration of the machine or user's choice")
 
-    parser.add_argument("--n_workers", default=2, type=int, help="Number of parallel environments.")
-    parser.add_argument("--interval", default=50, type=int,
+    parser.add_argument("--n_workers", default=128, type=int, help="Number of parallel environments.")
+    parser.add_argument("--interval", default=100, type=int,
                         help="The interval specifies how often different parameters should be saved and printed,"
                              " counted by iterations.")
+    parser.add_argument("--eval_n_workers", default=20, type=int, help="Number of parallel environments in evaluation.")
+    parser.add_argument("--eval_times", default=25, type=int, help="Number of evaluations during training process.")
     parser.add_argument("--seed", default=1111, type=int)
     parser.add_argument("--name", default="default", type=str)
     parser.add_argument("--do_test", action="store_true",

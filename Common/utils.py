@@ -10,8 +10,11 @@ import envpool
 def mean_of_list(func):
     def function_wrapper(*args, **kwargs):
         lists = func(*args, **kwargs)
-        return [sum(list) / len(list) for list in lists[:-4]] + [explained_variance(lists[-4], lists[-3])] + \
-               [explained_variance(lists[-2], lists[-1])]
+        return (
+            [sum(list) / len(list) for list in lists[:-4]]
+            + [explained_variance(lists[-4], lists[-3])]
+            + [explained_variance(lists[-2], lists[-1])]
+        )
 
     return function_wrapper
 
@@ -29,7 +32,9 @@ def stack_states(stacked_frames, state, is_new_episode):
         stacked_frames = np.stack([frame for _ in range(4)], axis=0)
     else:
         stacked_frames = stacked_frames[1:, ...]
-        stacked_frames = np.concatenate([stacked_frames, np.expand_dims(frame, axis=0)], axis=0)
+        stacked_frames = np.concatenate(
+            [stacked_frames, np.expand_dims(frame, axis=0)], axis=0
+        )
     return stacked_frames
 
 
@@ -49,7 +54,7 @@ def explained_variance(ypred, y):
     return np.nan if vary == 0 else 1 - np.var(y - ypred) / vary
 
 
-def make_atari(env_id, env_nums, max_episode_steps, sticky_action=True, max_and_skip=True, seed=1111):
+def make_atari(env_id, env_nums, max_episode_steps, seed):
     env = envpool.make(
         "MontezumaRevenge-v5",
         env_type="gym",
@@ -88,7 +93,9 @@ class StickyActionEnv(gym.Wrapper):
 class RepeatActionEnv(gym.Wrapper):
     def __init__(self, env):
         gym.Wrapper.__init__(self, env)
-        self.successive_frame = np.zeros((2,) + self.env.observation_space.shape, dtype=np.uint8)
+        self.successive_frame = np.zeros(
+            (2,) + self.env.observation_space.shape, dtype=np.uint8
+        )
 
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
@@ -139,9 +146,9 @@ class AddRandomStateToInfoEnv(gym.Wrapper):
     def step(self, action):
         state, reward, done, info = self.env.step(action)
         if done:
-            if 'episode' not in info:
-                info['episode'] = {}
-            info['episode']['rng_at_episode_start'] = self.rng_at_episode_start
+            if "episode" not in info:
+                info["episode"] = {}
+            info["episode"]["rng_at_episode_start"] = self.rng_at_episode_start
         return state, reward, done, info
 
     def reset(self):
@@ -153,8 +160,8 @@ class RunningMeanStd:
     # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
     # -> It's indeed batch normalization. :D
     def __init__(self, epsilon=1e-4, shape=()):
-        self.mean = np.zeros(shape, 'float64')
-        self.var = np.ones(shape, 'float64')
+        self.mean = np.zeros(shape, "float64")
+        self.var = np.ones(shape, "float64")
         self.count = epsilon
 
     def update(self, x):
@@ -165,10 +172,13 @@ class RunningMeanStd:
 
     def update_from_moments(self, batch_mean, batch_var, batch_count):
         self.mean, self.var, self.count = update_mean_var_count_from_moments(
-            self.mean, self.var, self.count, batch_mean, batch_var, batch_count)
+            self.mean, self.var, self.count, batch_mean, batch_var, batch_count
+        )
 
 
-def update_mean_var_count_from_moments(mean, var, count, batch_mean, batch_var, batch_count):
+def update_mean_var_count_from_moments(
+    mean, var, count, batch_mean, batch_var, batch_count
+):
     delta = batch_mean - mean
     tot_count = count + batch_count
 
@@ -205,11 +215,15 @@ def clip_grad_norm_(parameters, norm_type: float = 2.0):
     parameters = [p for p in parameters if p.grad is not None]
     norm_type = float(norm_type)
     if len(parameters) == 0:
-        return torch.tensor(0.)
+        return torch.tensor(0.0)
     device = parameters[0].grad.device
     if norm_type == inf:
         total_norm = max(p.grad.detach().abs().max().to(device) for p in parameters)
     else:
-        total_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), norm_type).to(device) for p in parameters]),
-                                norm_type)
+        total_norm = torch.norm(
+            torch.stack(
+                [torch.norm(p.grad.detach(), norm_type).to(device) for p in parameters]
+            ),
+            norm_type,
+        )
     return total_norm
